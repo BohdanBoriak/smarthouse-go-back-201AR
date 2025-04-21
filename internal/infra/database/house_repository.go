@@ -27,6 +27,8 @@ type HouseRepository interface {
 	Save(h domain.House) (domain.House, error)
 	FindList(uId uint64) ([]domain.House, error)
 	Find(id uint64) (domain.House, error)
+	Update(h domain.House) (domain.House, error)
+	Delete(id uint64) error
 }
 
 type houseRepository struct {
@@ -81,6 +83,24 @@ func (r houseRepository) Find(id uint64) (domain.House, error) {
 
 	hs := r.mapModelToDomain(h)
 	return hs, nil
+}
+
+func (r houseRepository) Update(h domain.House) (domain.House, error) {
+	hs := r.mapDomainToModel(h)
+	hs.UpdatedDate = time.Now()
+	err := r.coll.
+		Find(db.Cond{
+			"id":           hs.Id,
+			"deleted_date": nil}).Update(&hs)
+	if err != nil {
+		return domain.House{}, err
+	}
+
+	return r.mapModelToDomain(hs), nil
+}
+
+func (r houseRepository) Delete(id uint64) error {
+	return r.coll.Find(db.Cond{"id": id, "deleted_date": nil}).Update(map[string]interface{}{"deleted_date": time.Now()})
 }
 
 func (r houseRepository) mapDomainToModel(d domain.House) house {
